@@ -330,7 +330,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:9px;bottom:7px;font-size:10px;color:var(--dim2);opacity:.6;z-index:5;pointer-events:none">v17 · серверный помощник</div>
+<div style="position:fixed;right:9px;bottom:7px;font-size:10px;color:var(--dim2);opacity:.6;z-index:5;pointer-events:none">v18 · видеопоток</div>
 
 <script>
 (function(){
@@ -399,7 +399,10 @@
   function unmountPlayer(){try{video.pause();}catch(e){}stage.classList.remove("fs");stage.hidden=true;document.body.appendChild(stage);}
   async function yandexCandidates(raw){
     const out=[];
-    if(location.protocol==="http:"||location.protocol==="https:")out.push("/.netlify/functions/yadisk?link="+encodeURIComponent(raw));
+    if(location.protocol==="http:"||location.protocol==="https:"){
+      out.push("/yadisk?link="+encodeURIComponent(raw));
+      out.push("/.netlify/functions/yadisk?link="+encodeURIComponent(raw));
+    }
     const api="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(raw);
     try{const r=await fetch(api);if(r.ok){const j=await r.json();if(j&&j.href)out.push(j.href);}}catch(e){}
     try{const r=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(api));if(r.ok){const j=await r.json();if(j&&j.href)out.push(j.href);}}catch(e){}
