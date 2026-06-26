@@ -24,7 +24,7 @@ export default async (request) => {
     h.set("Content-Type", "video/mp4");
     h.delete("Content-Disposition");
     h.set("Accept-Ranges", "bytes");
-    h.set("Cache-Control", "no-store");
+    h.set("Cache-Control", "public, max-age=3600");
     return new Response(fileRes.body, { status: fileRes.status, headers: h });
   } catch (e) {
     return new Response("error: " + e, { status: 500 });
