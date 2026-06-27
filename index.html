@@ -258,6 +258,14 @@
   .gate h2{font-family:var(--serif);font-weight:normal;font-size:28px;margin:6px 0 6px}
   .gate p{color:var(--dim);font-size:14px;margin:0 0 18px}
 
+  /* confirm dialog */
+  .confirm{position:fixed;inset:0;z-index:120;background:rgba(8,11,20,.66);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
+  .confirm .box{background:linear-gradient(180deg,var(--bg2),var(--bg));border:1px solid var(--brd2);border-radius:18px;padding:24px;max-width:420px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:pop .25s cubic-bezier(.2,.8,.2,1)}
+  .confirm h3{font-family:var(--serif);font-weight:normal;font-size:21px;margin:0 0 8px}
+  .confirm p{color:var(--dim);font-size:14px;margin:0 0 20px;line-height:1.5}
+  .confirm .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .btn.danger{background:linear-gradient(135deg,#EA4B4B,#A8311F);color:#fff;box-shadow:0 8px 24px rgba(234,75,75,.32)}
+
   /* toast */
   .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;
     background:var(--bg2);border:1px solid var(--brd2);color:#fff;padding:13px 17px;border-radius:14px;font-size:14px;
@@ -330,7 +338,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:9px;bottom:7px;font-size:10px;color:var(--dim2);opacity:.6;z-index:5;pointer-events:none">v19 · плавное возобновление</div>
+
 
 <script>
 (function(){
@@ -512,6 +520,13 @@
   /* ===== toast ===== */
   let toastT=null;
   function toast(msg,link){const t=$("#toast");t.innerHTML="";const s=document.createElement("span");s.textContent=msg;t.appendChild(s);if(link){const i=document.createElement("input");i.type="text";i.value=link;i.readOnly=true;i.addEventListener("focus",()=>i.select());t.appendChild(i);}t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),link?7000:2600);if(link)setTimeout(()=>{const i=t.querySelector("input");if(i){i.focus();i.select();}},80);}
+
+  function confirmAsk(title,msg,onYes,yesLabel){
+    const m=document.createElement("div");m.className="confirm";
+    m.innerHTML=`<div class="box"><h3>${esc(title)}</h3><p>${esc(msg)}</p><div class="row"><button class="btn ghost" data-c="no">Отмена</button><button class="btn danger" data-c="yes"><span class="sheen"></span>${esc(yesLabel||"Удалить")}</button></div></div>`;
+    document.body.appendChild(m);
+    m.addEventListener("click",e=>{if(e.target===m){m.remove();return;}const b=e.target.closest("[data-c]");if(!b)return;if(b.dataset.c==="yes"){m.remove();onYes();}else m.remove();});
+  }
 
   /* ===== helpers ===== */
   const catName=id=>{const c=state.categories.find(c=>c.id===id);return c?c.name:"Без раздела";};
@@ -762,7 +777,7 @@
     });
     $("#eFile").addEventListener("change",e=>{const f=e.target.files[0];if(f){draft.videoUrl="";loadSrc(URL.createObjectURL(f));toast("Файл выбран (для проверки). Для учеников добавь ссылку.");}});
   }
-  function renderCpList(){const ul=$("#cpList");if(!ul)return;const sorted=[...draft.checkpoints].sort((a,b)=>a.time-b.time);ul.innerHTML=sorted.length?"":'<li style="color:var(--dim);border:none;background:none">Пока нет остановок.</li>';sorted.forEach(c=>{const li=document.createElement("li");li.innerHTML=`<span class="t">${fmt(c.time)}</span><span class="qt">${c.type==="choice"?"◉ ":"✏ "}${esc(c.question)}</span><button class="del">✕</button>`;li.querySelector(".t").addEventListener("click",()=>{video.currentTime=c.time;});li.querySelector(".del").addEventListener("click",()=>{draft.checkpoints=draft.checkpoints.filter(x=>x.id!==c.id);renderCpList();renderMarkers();});ul.appendChild(li);});}
+  function renderCpList(){const ul=$("#cpList");if(!ul)return;const sorted=[...draft.checkpoints].sort((a,b)=>a.time-b.time);ul.innerHTML=sorted.length?"":'<li style="color:var(--dim);border:none;background:none">Пока нет остановок.</li>';sorted.forEach(c=>{const li=document.createElement("li");li.innerHTML=`<span class="t">${fmt(c.time)}</span><span class="qt">${c.type==="choice"?"◉ ":"✏ "}${esc(c.question)}</span><button class="del">✕</button>`;li.querySelector(".t").addEventListener("click",()=>{video.currentTime=c.time;});li.querySelector(".del").addEventListener("click",()=>{confirmAsk("Удалить остановку?","Этот вопрос будет удалён из урока.",()=>{draft.checkpoints=draft.checkpoints.filter(x=>x.id!==c.id);renderCpList();renderMarkers();});});ul.appendChild(li);});}
   function closeEditor(m){unmountPlayer();m.remove();}
 
   /* ===== clicks ===== */
@@ -771,15 +786,15 @@
     else if(act==="filter"){filterCat=arg;render();}
     else if(act==="addcat"){$("#catInput").classList.add("show");$("#catName").focus();}
     else if(act==="savecat"){const v=$("#catName").value.trim();if(v){state.categories.push({id:uid(),name:v});saveData();render();}}
-    else if(act==="delcat"){e.stopPropagation();const n=state.assignments.filter(x=>x.categoryId===arg).length;if(n){toast("Сначала перенеси задания из этого раздела");return;}state.categories=state.categories.filter(c=>c.id!==arg);if(filterCat===arg)filterCat="all";saveData();render();}
+    else if(act==="delcat"){e.stopPropagation();const n=state.assignments.filter(x=>x.categoryId===arg).length;if(n){toast("Сначала перенеси задания из этого раздела");return;}const c=state.categories.find(x=>x.id===arg);confirmAsk("Удалить раздел?",(c?("«"+c.name+"». "):"")+"Раздел будет удалён.",()=>{state.categories=state.categories.filter(x=>x.id!==arg);if(filterCat===arg)filterCat="all";saveData();render();});}
     else if(act==="new")openEditor(null);
     else if(act==="edit")openEditor(findAsg(arg));
     else if(act==="play"){route={view:"student",id:arg,preview:true};render();}
     else if(act==="invite")toast("Ссылка для ученика:",inviteLink(arg));
     else if(act==="live"){route={view:"monitor",id:arg};render();}
     else if(act==="cowatch"){const p=arg.split("~");route={view:"cowatch",aid:p[0],sid:p[1]};render();}
-    else if(act==="clearmon"){try{fetch(SROOT+"/"+arg+".json",{method:"DELETE"});}catch(e){}monData={};renderMon();}
-    else if(act==="del"){state.assignments=state.assignments.filter(x=>x.id!==arg);saveData();render();}
+    else if(act==="clearmon"){confirmAsk("Очистить список?","Записи о текущих сессиях учеников будут удалены.",()=>{try{fetch(SROOT+"/"+arg+".json",{method:"DELETE"});}catch(e){}monData={};renderMon();},"Очистить");}
+    else if(act==="del"){const a=findAsg(arg);confirmAsk("Удалить урок?",(a?("«"+a.title+"». "):"")+"Это действие нельзя отменить.",()=>{state.assignments=state.assignments.filter(x=>x.id!==arg);saveData();render();});}
     else if(act==="back"){route={view:"tutor"};render();}
   }
   document.addEventListener("click",onClick);
